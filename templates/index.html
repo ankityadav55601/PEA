@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Personal Expense Analyzer</title>
+    <!-- Tailwind CSS & DaisyUI CDN -->
+    <link href="https://cdn.jsdelivr.net/npm/daisyui@4.12.10/dist/full.min.css" rel="stylesheet" type="text/css" />
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Chart.js CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body class="bg-slate-50 min-h-screen font-sans">
+
+    <!-- Navbar -->
+    <div class="navbar bg-white shadow-sm px-6 mb-8">
+        <div class="flex-1">
+            <a class="text-xl font-bold text-indigo-600">💰 ExpenseAnalyzer</a>
+        </div>
+        <div class="flex-none">
+            <span class="text-sm text-slate-500">SPM Project Dashboard</span>
+        </div>
+    </div>
+
+    <div class="max-w-6xl mx-auto px-4 pb-12">
+        
+        <!-- Top Metrics Cards -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+            <div class="stats shadow bg-white">
+                <div class="stat">
+                    <div class="stat-title">Total Expenses</div>
+                    <div class="stat-value text-indigo-600">₹{{ "%.2f"|format(total_spent) }}</div>
+                    <div class="stat-desc">Lifetime tracked spending</div>
+                </div>
+            </div>
+            <div class="stats shadow bg-white">
+                <div class="stat">
+                    <div class="stat-title">Transactions Logged</div>
+                    <div class="stat-value text-slate-700">{{ transactions|length }}</div>
+                    <div class="stat-desc">Total entries</div>
+                </div>
+            </div>
+            <div class="stats shadow bg-white">
+                <div class="stat">
+                    <div class="stat-title">Active Categories</div>
+                    <div class="stat-value text-emerald-600">{{ categories|length }}</div>
+                    <div class="stat-desc">Custom tracked groups</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            
+            <!-- Left Column: Add Transaction Form & Chart -->
+            <div class="space-y-8">
+                <!-- Add Form Card -->
+                <div class="card bg-white shadow-sm p-6 border border-slate-100">
+                    <h2 class="text-lg font-semibold mb-4 text-slate-800">Add New Expense</h2>
+                    <form method="POST" class="space-y-4">
+                        <div>
+                            <label class="label text-xs font-medium text-slate-600">Title / Description</label>
+                            <input type="text" name="title" placeholder="e.g., Groceries, Coffee" class="input input-bordered w-full text-sm" required />
+                        </div>
+                        <div>
+                            <label class="label text-xs font-medium text-slate-600">Amount (₹)</label>
+                            <input type="number" step="0.01" name="amount" placeholder="0.00" class="input input-bordered w-full text-sm" required />
+                        </div>
+                        <div>
+                            <label class="label text-xs font-medium text-slate-600">Category</label>
+                            <select name="category" class="select select-bordered w-full text-sm" required>
+                                <option value="Food">Food & Dining</option>
+                                <option value="Travel">Travel & Transport</option>
+                                <option value="Bills">Bills & Utilities</option>
+                                <option value="Shopping">Shopping</option>
+                                <option value="Other">Other</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="label text-xs font-medium text-slate-600">Date</label>
+                            <input type="date" name="date" class="input input-bordered w-full text-sm" />
+                        </div>
+                        <button type="submit" class="btn btn-primary w-full mt-2">Add Transaction</button>
+                    </form>
+                </div>
+
+                <!-- Category Chart Card -->
+                <div class="card bg-white shadow-sm p-6 border border-slate-100">
+                    <h2 class="text-lg font-semibold mb-4 text-slate-800">Spending by Category</h2>
+                    <div class="w-full flex justify-center">
+                        <canvas id="categoryChart" style="max-height: 220px;"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right Column: Transactions Table -->
+            <div class="lg:col-span-2">
+                <div class="card bg-white shadow-sm p-6 border border-slate-100">
+                    <h2 class="text-lg font-semibold mb-4 text-slate-800">Recent Transactions</h2>
+                    <div class="overflow-x-auto">
+                        <table class="table">
+                            <thead>
+                                <tr>
+                                    <th>Title</th>
+                                    <th>Category</th>
+                                    <th>Date</th>
+                                    <th>Amount</th>
+                                    <th>Action</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% if transactions %}
+                                    {% for row in transactions %}
+                                    <tr>
+                                        <td class="font-medium text-slate-800">{{ row[1] }}</td>
+                                        <td>
+                                            <span class="badge badge-ghost badge-sm">{{ row[3] }}</span>
+                                        </td>
+                                        <td class="text-slate-500 text-sm">{{ row[4] }}</td>
+                                        <td class="font-semibold text-rose-600">₹{{ "%.2f"|format(row[2]) }}</td>
+                                        <td>
+                                            <a href="/delete/{{ row[0] }}" class="text-error hover:underline text-xs">Delete</a>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                {% else %}
+                                    <tr>
+                                        <td colspan="5" class="text-center text-slate-400 py-6">No transactions added yet. Start by adding one on the left!</td>
+                                    </tr>
+                                {% endif %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- Chart.js Script Integration -->
+    <script>
+        const ctx = document.getElementById('categoryChart').getContext('2d');
+        const categories = {{ categories | tojson }};
+        const amounts = {{ amounts | tojson }};
+
+        if (categories.length > 0) {
+            new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: categories,
+                    datasets: [{
+                        data: amounts,
+                        backgroundColor: ['#6366f1', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6'],
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                            labels: { boxWidth: 12, font: { size: 11 } }
+                        }
+                    }
+                }
+            });
+        }
+    </script>
+</body>
+</html>
+<!-- Navbar -->
+    <div class="navbar bg-white shadow-sm px-6 mb-8 flex justify-between">
+        <div>
+            <a class="text-xl font-bold text-indigo-600">💰 ExpenseAnalyzer</a>
+        </div>
+        <div class="flex items-center gap-4">
+            <span class="text-sm font-medium text-slate-700">Hello, {{ username }}</span>
+            <a href="/logout" class="btn btn-sm btn-outline btn-error">Logout</a>
+        </div>
+    </div>
