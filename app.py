@@ -113,12 +113,19 @@ def index():
     conn.close()
     return redirect(url_for("index"))
 
-  # Fetch ONLY current user's transactions
-  cursor.execute(
-      "SELECT * FROM transactions WHERE user_id = ? ORDER BY date DESC",
-      (user_id,),
+# Fetch transactions and ensure amount is a float
+cursor.execute(
+    "SELECT id, user_id, title, amount, category, date FROM transactions WHERE"
+    " user_id = ? ORDER BY date DESC",
+    (user_id,),
+)
+raw_transactions = cursor.fetchall()
+transactions = []
+for row in raw_transactions:
+  # row[3] is amount (id, user_id, title, amount, category, date)
+  transactions.append(
+      (row[0], row[1], row[2], float(row[3]), row[4], row[5])
   )
-  transactions = cursor.fetchall()
 
   # Calculate metrics for current user only
   cursor.execute(
