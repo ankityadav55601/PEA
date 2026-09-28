@@ -4,9 +4,7 @@ import sqlite3
 from werkzeug.security import check_password_hash, generate_password_hash
 
 app = Flask(__name__)
-app.secret_key = (
-    "super_secret_key_for_college_project"  # Required for login sessions
-)
+app.secret_key = "super_secret_key_for_college_project"  # Required for login sessions
 
 
 def init_db():
@@ -113,19 +111,19 @@ def index():
     conn.close()
     return redirect(url_for("index"))
 
-# Fetch transactions and ensure amount is a float
-cursor.execute(
-    "SELECT id, user_id, title, amount, category, date FROM transactions WHERE"
-    " user_id = ? ORDER BY date DESC",
-    (user_id,),
-)
-raw_transactions = cursor.fetchall()
-transactions = []
-for row in raw_transactions:
-  # row[3] is amount (id, user_id, title, amount, category, date)
-  transactions.append(
-      (row[0], row[1], row[2], float(row[3]), row[4], row[5])
+  # Fetch transactions and ensure amount is a float
+  cursor.execute(
+      "SELECT id, user_id, title, amount, category, date FROM transactions WHERE"
+      " user_id = ? ORDER BY date DESC",
+      (user_id,),
   )
+  raw_transactions = cursor.fetchall()
+  transactions = []
+  for row in raw_transactions:
+    # row[3] is amount (id, user_id, title, amount, category, date)
+    transactions.append(
+        (row[0], row[1], row[2], float(row[3]), row[4], row[5])
+    )
 
   # Calculate metrics for current user only
   cursor.execute(
@@ -172,6 +170,8 @@ def delete_transaction(id):
   return redirect(url_for("index"))
 
 
+# Ensure database tables are initialized when the application boots up
+init_db()
+
 if __name__ == "__main__":
-  init_db()
   app.run(debug=True)
